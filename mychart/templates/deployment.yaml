@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{.Values.dpname.name}}
+  labels:
+    {{- include "mychart.labels" . | nindent 4 }}
+spec:
+{{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+{{- end }}      
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: frontend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: frontend
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        fsGroup: {{ .Values.securityContext.fsGroup }} 
+      containers:
+      - image: {{.Values.wpimage.name}}:{{.Values.wpimage.tag}} 
+        name: wordpress
+        env:
+        - name: WORDPRESS_DB_HOST
+          value: mysql-lb 
+        - name: WORDPRESS_USER
+          value: wordpress
+
+        - name: WORDPRESS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: wordpress-task-pass
+              key: password
+
+
+
+        ports:
+        - containerPort: 80
+          name: wordpress
